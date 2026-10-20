@@ -1,0 +1,20 @@
+{
+  "name": "inventory-system",
+  "version": "1.0.0",
+  "description": "Inventory Management System (Mini) - CSE706 Scrum project",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "jest": "^30.5.2",
+    "newman": "^6.2.3",
+    "supertest": "^7.3.1"
+  }
+}

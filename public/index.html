@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inventory Management System</title>
+<style>
+  :root { --bg:#f5f6fa; --card:#fff; --text:#1f2430; --muted:#6b7280; --accent:#2563eb; --border:#e5e7eb; --danger:#dc2626; --ok:#16a34a; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#12141a; --card:#1b1e27; --text:#e6e8ee; --muted:#9aa1b2; --border:#2a2e3a; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--text); }
+  header { padding:20px 24px; border-bottom:1px solid var(--border); background:var(--card); }
+  header h1 { margin:0; font-size:20px; }
+  header p { margin:4px 0 0; color:var(--muted); font-size:13px; }
+  main { max-width:1000px; margin:24px auto; padding:0 16px; display:grid; gap:20px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px; }
+  .card h2 { margin:0 0 14px; font-size:16px; }
+  form { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; align-items:end; }
+  label { display:flex; flex-direction:column; font-size:12px; color:var(--muted); gap:4px; }
+  input { padding:8px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font-size:14px; }
+  button { padding:9px 14px; border:0; border-radius:6px; background:var(--accent); color:#fff; font-size:14px; cursor:pointer; }
+  button.secondary { background:transparent; color:var(--text); border:1px solid var(--border); }
+  button.small { padding:5px 10px; font-size:12px; }
+  .actions { display:flex; gap:8px; }
+  #msg { min-height:20px; font-size:13px; margin-bottom:10px; }
+  #msg.error { color:var(--danger); } #msg.ok { color:var(--ok); }
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  .empty { color:var(--muted); padding:16px 0; text-align:center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Inventory Management System</h1>
+  <p>Sprint 1 - Core Item Management (add, view, update products)</p>
+</header>
+<main>
+  <section class="card">
+    <h2 id="form-title">Add product</h2>
+    <div id="msg" role="status"></div>
+    <form id="product-form">
+      <label>Name<input id="name" required maxlength="100"></label>
+      <label>SKU<input id="sku" required></label>
+      <label>Category<input id="category" placeholder="General"></label>
+      <label>Price<input id="price" type="number" step="0.01" min="0" required></label>
+      <label>Quantity<input id="quantity" type="number" step="1" min="0" value="0"></label>
+      <label>Low-stock threshold<input id="threshold" type="number" step="1" min="0" value="5"></label>
+      <div class="actions">
+        <button type="submit" id="submit-btn">Add product</button>
+        <button type="button" class="secondary" id="cancel-btn" hidden>Cancel</button>
+      </div>
+    </form>
+  </section>
+  <section class="card">
+    <h2>All products</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Name</th><th>SKU</th><th>Category</th><th>Price</th><th>Qty</th><th>Threshold</th><th></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div id="empty" class="empty" hidden>No products yet. Add your first product above.</div>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const form = $('product-form');
+let editingId = null;
+let products = [];
+
+function show(text, type) { const m = $('msg'); m.textContent = text; m.className = type || ''; }
+
+async function api(path, options) {
+  const res = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...options });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error([data.error, ...(data.details || [])].filter(Boolean).join(': '));
+  return data;
+}
+
+async function load() {
+  products = await api('/api/products');
+  const rows = $('rows');
+  rows.innerHTML = '';
+  $('empty').hidden = products.length > 0;
+  for (const p of products) {
+    const tr = document.createElement('tr');
+    const cells = [p.id, p.name, p.sku, p.category, Number(p.price).toFixed(2), p.quantity, p.lowStockThreshold];
+    for (const c of cells) { const td = document.createElement('td'); td.textContent = c; tr.appendChild(td); }
+    const td = document.createElement('td');
+    const btn = document.createElement('button');
+    btn.className = 'secondary small'; btn.textContent = 'Edit';
+    btn.onclick = () => startEdit(p.id);
+    td.appendChild(btn); tr.appendChild(td);
+    rows.appendChild(tr);
+  }
+}
+
+function startEdit(id) {
+  const p = products.find((x) => x.id === id);
+  editingId = id;
+  $('name').value = p.name; $('sku').value = p.sku; $('category').value = p.category;
+  $('price').value = p.price; $('quantity').value = p.quantity; $('threshold').value = p.lowStockThreshold;
+  $('form-title').textContent = 'Update product #' + id;
+  $('submit-btn').textContent = 'Save changes';
+  $('cancel-btn').hidden = false;
+  show('');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function reset() {
+  editingId = null; form.reset();
+  $('quantity').value = 0; $('threshold').value = 5;
+  $('form-title').textContent = 'Add product';
+  $('submit-btn').textContent = 'Add product';
+  $('cancel-btn').hidden = true;
+}
+$('cancel-btn').onclick = () => { reset(); show(''); };
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const body = {
+    name: $('name').value, sku: $('sku').value,
+    price: parseFloat($('price').value),
+    quantity: parseInt($('quantity').value || '0', 10),
+    lowStockThreshold: parseInt($('threshold').value || '5', 10),
+  };
+  if ($('category').value.trim()) body.category = $('category').value;
+  try {
+    if (editingId) { await api('/api/products/' + editingId, { method: 'PUT', body: JSON.stringify(body) }); show('Product updated', 'ok'); }
+    else { await api('/api/products', { method: 'POST', body: JSON.stringify(body) }); show('Product added', 'ok'); }
+    reset(); await load();
+  } catch (err) { show(err.message, 'error'); }
+});
+
+load().catch((e) => show(e.message, 'error'));
+</script>
+</body>
+</html>
