@@ -41,6 +41,13 @@ class ProductService {
     }
     return this.repository.update(id, { ...existing, ...clean, updatedAt: new Date().toISOString() });
   }
+
+  // US-4: delete a product
+  deleteProduct(id) {
+    const existing = this.getProduct(id);
+    this.repository.delete(id);
+    return existing;
+  }
 }
 
 module.exports = ProductService;

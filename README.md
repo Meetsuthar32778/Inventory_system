@@ -16,6 +16,7 @@ Use `STORAGE=memory npm start` for a throwaway in-memory run.
 | US-1 | Add a product | `POST /api/products` |
 | US-2 | View all products | `GET /api/products`, `GET /api/products/:id` |
 | US-3 | Update product details | `PUT /api/products/:id` |
+| US-4 | Delete a product | `DELETE /api/products/:id` |
 
 ### Acceptance criteria
 **US-1 Add product**
@@ -30,6 +31,10 @@ Use `STORAGE=memory npm start` for a throwaway in-memory run.
 **US-3 Update product**
 - Given an existing product, when I change any field, then only those fields change and `updatedAt` is refreshed.
 - Given invalid values, then 400; unknown id, then 404; SKU used by another product, then 409.
+
+**US-4 Delete product**
+- Given an existing product, when I delete it, then the API returns 204 and it no longer appears in the list.
+- Given an unknown id, then I get 404; an invalid id returns 400.
 
 ## Architecture (SOLID)
 - **Single responsibility:** `routes` (HTTP), `services` (business rules), `repositories` (storage), `models` (validation).

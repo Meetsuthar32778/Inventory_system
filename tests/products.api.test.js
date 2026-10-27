@@ -63,4 +63,20 @@ describe('Products API (integration, TDD module 2)', () => {
     await request(app).post('/api/products').send(valid);
     expect((await request(app).put('/api/products/1').send({ price: -9 })).status).toBe(400);
   });
+
+  test('DELETE /api/products/:id deletes an existing product (204)', async () => {
+    await request(app).post('/api/products').send(valid);
+    const res = await request(app).delete('/api/products/1');
+    expect(res.status).toBe(204);
+    expect((await request(app).get('/api/products/1')).status).toBe(404);
+    expect((await request(app).get('/api/products')).body).toHaveLength(0);
+  });
+
+  test('DELETE on missing product returns 404', async () => {
+    expect((await request(app).delete('/api/products/77')).status).toBe(404);
+  });
+
+  test('DELETE with invalid id returns 400', async () => {
+    expect((await request(app).delete('/api/products/abc')).status).toBe(400);
+  });
 });

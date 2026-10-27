@@ -34,7 +34,7 @@
 <body>
 <header>
   <h1>Inventory Management System</h1>
-  <p>Sprint 1 - Core Item Management (add, view, update products)</p>
+  <p>Sprint 1 - Core Item Management (add, view, update, delete products)</p>
 </header>
 <main>
   <section class="card">
@@ -93,8 +93,23 @@ async function load() {
     btn.className = 'secondary small'; btn.textContent = 'Edit';
     btn.onclick = () => startEdit(p.id);
     td.appendChild(btn); tr.appendChild(td);
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'small'; deleteBtn.textContent = 'Delete';
+    deleteBtn.style.background = 'var(--danger)';
+    deleteBtn.onclick = () => removeProduct(p.id);
+    td.appendChild(deleteBtn);
     rows.appendChild(tr);
   }
+}
+
+async function removeProduct(id) {
+  if (!window.confirm('Delete product #' + id + '?')) return;
+  try {
+    await api('/api/products/' + id, { method: 'DELETE' });
+    if (editingId === id) reset();
+    show('Product deleted', 'ok');
+    await load();
+  } catch (err) { show(err.message, 'error'); }
 }
 
 function startEdit(id) {

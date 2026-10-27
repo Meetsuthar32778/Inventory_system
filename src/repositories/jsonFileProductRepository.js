@@ -38,6 +38,12 @@ class JsonFileProductRepository extends InMemoryProductRepository {
     if (saved) this._save();
     return saved;
   }
+
+  delete(id) {
+    const removed = super.delete(id);
+    if (removed) this._save();
+    return removed;
+  }
 }
 
 module.exports = JsonFileProductRepository;

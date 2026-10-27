@@ -96,4 +96,16 @@ describe('ProductService (unit, TDD module 1)', () => {
       expect(() => service.updateProduct(id, { sku: 'nb-001', price: 60 })).not.toThrow();
     });
   });
+
+  describe('US-4 deleteProduct', () => {
+    test('deletes and returns an existing product', () => {
+      const created = service.addProduct(valid);
+      expect(service.deleteProduct(created.id)).toMatchObject({ id: created.id, sku: 'NB-001' });
+      expect(service.listProducts()).toEqual([]);
+    });
+
+    test('throws NotFoundError for unknown id', () => {
+      expect(() => service.deleteProduct(42)).toThrow(NotFoundError);
+    });
+  });
 });

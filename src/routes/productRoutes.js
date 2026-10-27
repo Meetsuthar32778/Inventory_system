@@ -41,6 +41,15 @@ function productRoutes(productService) {
     } catch (e) { next(e); }
   });
 
+  router.delete('/:id', (req, res, next) => {
+    try {
+      const id = parseId(req, res);
+      if (id === null) return;
+      productService.deleteProduct(id);
+      res.status(204).send();
+    } catch (e) { next(e); }
+  });
+
   return router;
 }
 

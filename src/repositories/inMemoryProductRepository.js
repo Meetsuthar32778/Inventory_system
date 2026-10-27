@@ -5,6 +5,7 @@
  *   findById(id) -> product | null
  *   findBySku(sku) -> product | null
  *   update(id, product) -> product | null
+ *   delete(id) -> product | null
  */
 class InMemoryProductRepository {
   constructor() {
@@ -37,6 +38,13 @@ class InMemoryProductRepository {
     if (i === -1) return null;
     this.products[i] = { ...product, id };
     return { ...this.products[i] };
+  }
+
+  delete(id) {
+    const i = this.products.findIndex((x) => x.id === id);
+    if (i === -1) return null;
+    const [removed] = this.products.splice(i, 1);
+    return { ...removed };
   }
 }
 
