@@ -42,10 +42,17 @@ Use `STORAGE=memory npm start` for a throwaway in-memory run.
 - **Dependency inversion:** `ProductService` receives a repository through its constructor; swap in MongoDB later without touching business logic.
 
 ## Testing
-- `tests/productService.test.js` - TDD module 1 (service rules)
-- `tests/products.api.test.js` - TDD module 2 (API through Supertest)
+- `tests/productService.test.js` - TDD module 1 (service rules for US-1 to US-4)
+- `tests/products.api.test.js` - TDD module 2 (API through Supertest: status codes, response bodies, error handling, static UI)
+- `tests/productModel.test.js` - validation rules, defaults and normalisation for every field
+- `tests/inMemoryRepository.test.js` / `tests/jsonFileRepository.test.js` - repository contract and JSON persistence (missing/corrupt files, id sequence)
+- `tests/errors.test.js` - custom error classes and their HTTP status codes
+- `tests/server.test.js` - server bootstrap (`STORAGE` and `PORT` environment variables)
+- `tests/ui.test.js` - web UI in jsdom: list and empty state, add, edit, cancel, delete and error messages
+- `npm run test:coverage` - Jest with a coverage report (currently 100% of `src/`)
 - `postman/inventory.postman_collection.json` - API tests; run `npx newman run postman/inventory.postman_collection.json` while the server is up
 - CI: `.github/workflows/ci.yml` runs Jest and Newman on every push
+- `docs/TEST_REPORT.md` - test cases per acceptance criterion, latest results, defect log and sign-off
 
 ## Suggested git workflow (keep Jira keys in commits)
 ```
