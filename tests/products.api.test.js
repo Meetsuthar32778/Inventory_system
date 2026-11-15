@@ -204,6 +204,13 @@ describe('Products API - response contract and edge cases', () => {
       expect((await request(app).put('/api/products/abc').send({ price: 1 })).status).toBe(400);
     });
 
+    test('DEF-2: a JSON array body returns 400', async () => {
+      await post(valid);
+      const res = await request(app).put('/api/products/1').send([]);
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual({ error: 'Validation failed', details: ['Request body must be a JSON object'] });
+    });
+
     test('malformed JSON returns 400', async () => {
       await post(valid);
       const res = await request(app).put('/api/products/1').set('Content-Type', 'application/json').send('{bad');

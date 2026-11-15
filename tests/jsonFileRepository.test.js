@@ -100,3 +100,11 @@ test('derives nextId from the product count when nextId is missing', () => {
   expect(repo.findAll()).toHaveLength(2);
   expect(repo.create({ sku: 'C' }).id).toBe(3);
 });
+
+test('DEF-1: avoids duplicate ids when nextId is missing and existing ids have gaps', () => {
+  const file = tempFile();
+  fs.writeFileSync(file, JSON.stringify({ products: [{ id: 3, sku: 'A' }, { id: 1, sku: 'B' }] }));
+  const repo = new JsonFileProductRepository(file);
+  expect(repo.findAll()).toHaveLength(2);
+  expect(repo.create({ sku: 'C' }).id).toBe(4);
+});

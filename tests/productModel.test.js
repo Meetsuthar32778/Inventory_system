@@ -19,6 +19,7 @@ describe('validateProduct (unit)', () => {
       ['null', null],
       ['a string', 'Notebook'],
       ['a number', 42],
+      ['an array', []],
     ])('rejects %s as the body', (_label, input) => {
       expect(detailsOf(() => validateProduct(input))).toEqual(['Request body must be a JSON object']);
       expect(detailsOf(() => validateProduct(input, { partial: true }))).toEqual(['Request body must be a JSON object']);

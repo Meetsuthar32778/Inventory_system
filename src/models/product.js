@@ -14,7 +14,7 @@ function validateProduct(data, { partial = false } = {}) {
   const out = {};
   const has = (k) => data[k] !== undefined;
 
-  if (!data || typeof data !== 'object') {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
     throw new ValidationError(['Request body must be a JSON object']);
   }
 
