@@ -15,7 +15,8 @@ class JsonFileProductRepository extends InMemoryProductRepository {
     try {
       const raw = JSON.parse(fs.readFileSync(this.filePath, 'utf8'));
       this.products = raw.products || [];
-      this.nextId = raw.nextId || this.products.length + 1;
+      const maxId = this.products.reduce((max, p) => (p.id > max ? p.id : max), 0);
+      this.nextId = raw.nextId || maxId + 1;
     } catch (e) {
       this.products = [];
       this.nextId = 1;

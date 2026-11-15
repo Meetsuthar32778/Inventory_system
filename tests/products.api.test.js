@@ -170,6 +170,53 @@ describe('Products API - response contract and edge cases', () => {
     });
   });
 
+  describe('US-5 GET /api/products query filters (search & category)', () => {
+    beforeEach(async () => {
+      await post({ name: 'Gel Pen', sku: 'PEN-01', price: 15, category: 'Stationery' });
+      await post({ name: 'Ballpoint Pen', sku: 'PEN-02', price: 10, category: 'Stationery' });
+      await post({ name: 'Office Desk', sku: 'DSK-99', price: 4500, category: 'Furniture' });
+    });
+
+    test('search query matches product name case-insensitively', async () => {
+      const res = await request(app).get('/api/products?search=gel');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0].name).toBe('Gel Pen');
+    });
+
+    test('search query matches SKU case-insensitively', async () => {
+      const res = await request(app).get('/api/products?search=pen-02');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0].sku).toBe('PEN-02');
+    });
+
+    test('category query filters products', async () => {
+      const res = await request(app).get('/api/products?category=Furniture');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0].name).toBe('Office Desk');
+    });
+
+    test('combines search and category filters', async () => {
+      const res = await request(app).get('/api/products?search=pen&category=Stationery');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(2);
+    });
+
+    test('returns empty array when search yields no matches', async () => {
+      const res = await request(app).get('/api/products?search=laptop');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual([]);
+    });
+
+    test('category "All" does not filter categories', async () => {
+      const res = await request(app).get('/api/products?category=all');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(3);
+    });
+  });
+
   describe('US-3 PUT /api/products/:id', () => {
     test('only changes the supplied fields and refreshes updatedAt', async () => {
       const { body: created } = await post(valid);
@@ -202,6 +249,13 @@ describe('Products API - response contract and edge cases', () => {
 
     test('invalid id returns 400', async () => {
       expect((await request(app).put('/api/products/abc').send({ price: 1 })).status).toBe(400);
+    });
+
+    test('DEF-2: a JSON array body returns 400', async () => {
+      await post(valid);
+      const res = await request(app).put('/api/products/1').send([]);
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual({ error: 'Validation failed', details: ['Request body must be a JSON object'] });
     });
 
     test('malformed JSON returns 400', async () => {
@@ -255,6 +309,114 @@ describe('Products API - response contract and edge cases', () => {
     });
   });
 
+  describe('US-6 POST /api/products/:id/adjust-stock & PATCH /api/products/:id/stock', () => {
+    test('increases stock and returns updated product (200)', async () => {
+      await post({ ...valid, quantity: 10 });
+      const res = await request(app).post('/api/products/1/adjust-stock').send({ action: 'increase', amount: 5 });
+      expect(res.status).toBe(200);
+      expect(res.body.quantity).toBe(15);
+      expect((await request(app).get('/api/products/1')).body.quantity).toBe(15);
+    });
+
+    test('reduces stock via PATCH /api/products/:id/stock (200)', async () => {
+      await post({ ...valid, quantity: 10 });
+      const res = await request(app).patch('/api/products/1/stock').send({ action: 'decrease', amount: 4 });
+      expect(res.status).toBe(200);
+      expect(res.body.quantity).toBe(6);
+    });
+
+    test('returns 400 when decrease causes negative inventory', async () => {
+      await post({ ...valid, quantity: 2 });
+      const res = await request(app).post('/api/products/1/adjust-stock').send({ action: 'decrease', amount: 5 });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Validation failed');
+      expect(res.body.details[0]).toMatch(/Stock cannot be negative/);
+      expect((await request(app).get('/api/products/1')).body.quantity).toBe(2);
+    });
+
+    test('returns 400 for invalid adjustment payload', async () => {
+      await post(valid);
+      const res = await request(app).post('/api/products/1/adjust-stock').send({ action: 'invalid', amount: 0 });
+      expect(res.status).toBe(400);
+      expect(res.body.details).toEqual([
+        'action must be either "increase" or "decrease"',
+        'amount must be a positive integer',
+      ]);
+    });
+
+    test('returns 404 for unknown product id', async () => {
+      const res = await request(app).post('/api/products/999/adjust-stock').send({ action: 'increase', amount: 5 });
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Product not found');
+    });
+
+    test('returns 400 for invalid id in path', async () => {
+      const res = await request(app).post('/api/products/xyz/adjust-stock').send({ action: 'increase', amount: 5 });
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe('US-7 GET /api/products/low-stock', () => {
+    test('returns only products at or below their lowStockThreshold', async () => {
+      await post({ name: 'Paper Clips', sku: 'CLP-1', price: 2, quantity: 5, lowStockThreshold: 5 }); // boundary
+      await post({ name: 'Glue', sku: 'GLU-1', price: 4, quantity: 1, lowStockThreshold: 5 }); // below
+      await post({ name: 'Printer', sku: 'PRN-1', price: 200, quantity: 10, lowStockThreshold: 5 }); // above
+
+      const res = await request(app).get('/api/products/low-stock');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(2);
+      expect(res.body.map((p) => p.sku)).toEqual(['CLP-1', 'GLU-1']);
+    });
+
+    test('returns empty array when no products are low in stock', async () => {
+      await post({ name: 'Printer', sku: 'PRN-1', price: 200, quantity: 20, lowStockThreshold: 5 });
+      const res = await request(app).get('/api/products/low-stock');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual([]);
+    });
+  });
+
+  describe('US-8 GET /api/products/report & /report/csv', () => {
+    test('returns accurate summary and valuation report', async () => {
+      await post({ name: 'Item 1', sku: 'IT-1', category: 'CatA', price: 50, quantity: 4, lowStockThreshold: 2 });
+      await post({ name: 'Item 2', sku: 'IT-2', category: 'CatB', price: 25, quantity: 2, lowStockThreshold: 5 });
+
+      const res = await request(app).get('/api/products/report');
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        totalProducts: 2,
+        totalUnits: 6,
+        lowStockCount: 1,
+        totalValuation: 250,
+      });
+      expect(res.body.items).toHaveLength(2);
+      expect(res.body.items[0]).toMatchObject({ sku: 'IT-1', stockValue: 200, isLowStock: false });
+      expect(res.body.items[1]).toMatchObject({ sku: 'IT-2', stockValue: 50, isLowStock: true });
+    });
+
+    test('returns report for empty inventory', async () => {
+      const res = await request(app).get('/api/products/report');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        totalProducts: 0,
+        totalUnits: 0,
+        lowStockCount: 0,
+        totalValuation: 0,
+        items: [],
+      });
+    });
+
+    test('exports CSV with text/csv content type and attachment header', async () => {
+      await post({ name: 'Folder', sku: 'FLD-1', category: 'Office', price: 10, quantity: 3, lowStockThreshold: 5 });
+      const res = await request(app).get('/api/products/report/csv');
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toMatch(/text\/csv/);
+      expect(res.headers['content-disposition']).toContain('attachment; filename="inventory-report.csv"');
+      expect(res.text).toContain('ID,Name,SKU,Category,Price,Quantity,LowStockThreshold,StockValue,LowStockStatus');
+      expect(res.text).toContain('Folder,FLD-1,Office,10.00,3,5,30.00,LOW_STOCK');
+    });
+  });
+
   describe('app wiring', () => {
     test('serves the web UI at /', async () => {
       const res = await request(app).get('/');
@@ -283,6 +445,10 @@ describe('Products API - response contract and edge cases', () => {
       expect((await request(broken).get('/api/products/1')).status).toBe(500);
       expect((await request(broken).put('/api/products/1').send({ price: 1 })).status).toBe(500);
       expect((await request(broken).delete('/api/products/1')).status).toBe(500);
+      expect((await request(broken).get('/api/products/low-stock')).status).toBe(500);
+      expect((await request(broken).get('/api/products/report')).status).toBe(500);
+      expect((await request(broken).get('/api/products/report/csv')).status).toBe(500);
+      expect((await request(broken).post('/api/products/1/adjust-stock').send({ action: 'increase', amount: 1 })).status).toBe(500);
     });
 
     test('errors with a custom status keep their message and details', async () => {

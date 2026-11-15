@@ -5,39 +5,100 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Inventory Management System</title>
 <style>
-  :root { --bg:#f5f6fa; --card:#fff; --text:#1f2430; --muted:#6b7280; --accent:#2563eb; --border:#e5e7eb; --danger:#dc2626; --ok:#16a34a; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#12141a; --card:#1b1e27; --text:#e6e8ee; --muted:#9aa1b2; --border:#2a2e3a; } }
+  :root {
+    --bg: #f5f6fa;
+    --card: #ffffff;
+    --text: #1f2430;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --border: #e5e7eb;
+    --danger: #dc2626;
+    --ok: #16a34a;
+    --warn: #d97706;
+    --warn-bg: #fef3c7;
+    --warn-text: #92400e;
+    --ok-bg: #dcfce7;
+    --ok-text: #166534;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12141a;
+      --card: #1b1e27;
+      --text: #e6e8ee;
+      --muted: #9aa1b2;
+      --border: #2a2e3a;
+      --warn-bg: #451a03;
+      --warn-text: #fde68a;
+      --ok-bg: #052e16;
+      --ok-text: #86efac;
+    }
+  }
   * { box-sizing: border-box; }
-  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--text); }
-  header { padding:20px 24px; border-bottom:1px solid var(--border); background:var(--card); }
-  header h1 { margin:0; font-size:20px; }
-  header p { margin:4px 0 0; color:var(--muted); font-size:13px; }
-  main { max-width:1000px; margin:24px auto; padding:0 16px; display:grid; gap:20px; }
-  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px; }
-  .card h2 { margin:0 0 14px; font-size:16px; }
-  form { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; align-items:end; }
-  label { display:flex; flex-direction:column; font-size:12px; color:var(--muted); gap:4px; }
-  input { padding:8px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font-size:14px; }
-  button { padding:9px 14px; border:0; border-radius:6px; background:var(--accent); color:#fff; font-size:14px; cursor:pointer; }
-  button.secondary { background:transparent; color:var(--text); border:1px solid var(--border); }
-  button.small { padding:5px 10px; font-size:12px; }
-  .actions { display:flex; gap:8px; }
-  #msg { min-height:20px; font-size:13px; margin-bottom:10px; }
-  #msg.error { color:var(--danger); } #msg.ok { color:var(--ok); }
-  .table-wrap { overflow-x:auto; }
-  table { width:100%; border-collapse:collapse; font-size:14px; }
-  th, td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--border); white-space:nowrap; }
-  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
-  .empty { color:var(--muted); padding:16px 0; text-align:center; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+  header { padding: 20px 24px; border-bottom: 1px solid var(--border); background: var(--card); }
+  header h1 { margin: 0; font-size: 22px; font-weight: 700; }
+  header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+  main { max-width: 1100px; margin: 24px auto; padding: 0 16px; display: grid; gap: 24px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .card-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 14px; font-size: 17px; font-weight: 600; }
+  .card-header h2 { margin: 0; }
+  form { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: end; }
+  label { display: flex; flex-direction: column; font-size: 12px; font-weight: 500; color: var(--muted); gap: 4px; }
+  input, select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 14px; }
+  button, .button { display: inline-flex; align-items: center; justify-content: center; padding: 9px 14px; border: 0; border-radius: 6px; background: var(--accent); color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; }
+  button:hover, .button:hover { background: var(--accent-hover); }
+  button.secondary, .button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  button.secondary:hover, .button.secondary:hover { background: var(--bg); }
+  button.small, .button.small { padding: 5px 10px; font-size: 12px; }
+  .actions { display: flex; gap: 8px; align-items: center; }
+  #msg, #stock-msg { min-height: 20px; font-size: 13px; margin-bottom: 12px; }
+  #msg.error, #stock-msg.error { color: var(--danger); font-weight: 500; }
+  #msg.ok, #stock-msg.ok { color: var(--ok); font-weight: 500; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .empty { color: var(--muted); padding: 18px 0; text-align: center; font-size: 14px; }
+  .badge { display: inline-block; padding: 3px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+  .badge-warn { background: var(--warn-bg); color: var(--warn-text); }
+  .badge-ok { background: var(--ok-bg); color: var(--ok-text); }
+  tr.low-stock-row { background-color: rgba(217, 119, 6, 0.05); }
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 16px; }
+  .metric-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+  .metric-label { font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+  .metric-val { font-size: 22px; font-weight: 700; color: var(--text); }
 </style>
 </head>
 <body>
 <header>
   <h1>Inventory Management System</h1>
-  <p>Sprint 1 - Core Item Management (add, view, update, delete products)</p>
+  <p>Sprint 1 &amp; Sprint 2 — Core Item Management, Search &amp; Filter, Stock Adjustment, Low-Stock Alerts &amp; Valuation Reports</p>
 </header>
 <main>
-  <section class="card">
+  <!-- US-5: Search and Filter Products -->
+  <section class="card" id="search-filter-section">
+    <h2>Search and Filter Products</h2>
+    <form id="filter-form">
+      <label>Search by Name or SKU
+        <input id="search-input" placeholder="e.g. Notebook or NB-001">
+      </label>
+      <label>Category
+        <select id="filter-category">
+          <option value="All">All Categories</option>
+        </select>
+      </label>
+      <div class="actions">
+        <button type="submit" id="search-btn">Search</button>
+        <button type="button" class="secondary" id="clear-filters-btn">Reset</button>
+      </div>
+    </form>
+    <div id="filter-empty" class="empty" hidden>No products match your search or filter criteria.</div>
+  </section>
+
+  <!-- US-1 & US-3: Add / Update Product Form -->
+  <section class="card" id="product-management-section">
     <h2 id="form-title">Add product</h2>
     <div id="msg" role="status"></div>
     <form id="product-form">
@@ -53,7 +114,9 @@
       </div>
     </form>
   </section>
-  <section class="card">
+
+  <!-- US-2: All Products Table -->
+  <section class="card" id="all-products-section">
     <h2>All products</h2>
     <div class="table-wrap">
       <table>
@@ -63,6 +126,79 @@
     </div>
     <div id="empty" class="empty" hidden>No products yet. Add your first product above.</div>
   </section>
+
+  <!-- US-6: Increase or Reduce Stock -->
+  <section class="card" id="stock-adjustment-section">
+    <h2>Increase or Reduce Stock</h2>
+    <div id="stock-msg" role="status"></div>
+    <form id="stock-form">
+      <label>Select Product
+        <select id="adjust-product-id" required>
+          <option value="">Select a product...</option>
+        </select>
+      </label>
+      <label>Action
+        <select id="adjust-action">
+          <option value="increase">Increase (+)</option>
+          <option value="decrease">Reduce (-)</option>
+        </select>
+      </label>
+      <label>Adjustment Quantity
+        <input id="adjust-amount" type="number" step="1" min="1" placeholder="Positive integer" required>
+      </label>
+      <div class="actions">
+        <button type="submit" id="adjust-submit-btn">Adjust Stock</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- US-7: Identify Low-Stock Products -->
+  <section class="card" id="low-stock-section">
+    <h2>Low-Stock Alerts</h2>
+    <div class="table-wrap" id="low-stock-table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Name</th><th>SKU</th><th>Available Qty</th><th>Threshold</th><th>Status</th></tr></thead>
+        <tbody id="low-stock-rows"></tbody>
+      </table>
+    </div>
+    <div id="low-stock-empty" class="empty" hidden>All inventory levels are healthy. No products are currently low in stock.</div>
+  </section>
+
+  <!-- US-8: View Inventory Report -->
+  <section class="card" id="inventory-report-section">
+    <div class="card-header">
+      <h2>Inventory Valuation Report</h2>
+      <div class="actions">
+        <button type="button" class="secondary small" id="refresh-report-btn">Refresh Report</button>
+        <a class="button small" id="export-csv-btn" href="/api/products/report/csv" download="inventory-report.csv">Download CSV</a>
+      </div>
+    </div>
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <span class="metric-label">Total Products</span>
+        <span class="metric-val" id="report-total-products">0</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Total Units in Stock</span>
+        <span class="metric-val" id="report-total-units">0</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Low-Stock Items</span>
+        <span class="metric-val" id="report-low-stock">0</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Total Valuation</span>
+        <span class="metric-val" id="report-total-valuation">$0.00</span>
+      </div>
+    </div>
+    <div class="table-wrap" id="report-table-wrap">
+      <table>
+        <thead><tr><th>Product Name</th><th>SKU</th><th>Category</th><th>Price</th><th>Quantity</th><th>Stock Value</th><th>Status</th></tr></thead>
+        <tbody id="report-rows"></tbody>
+      </table>
+    </div>
+    <div id="report-empty" class="empty" hidden>No inventory data available. Add products to generate a report.</div>
+  </section>
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -71,6 +207,7 @@ let editingId = null;
 let products = [];
 
 function show(text, type) { const m = $('msg'); m.textContent = text; m.className = type || ''; }
+function showStock(text, type) { const m = $('stock-msg'); m.textContent = text; m.className = type || ''; }
 
 async function api(path, options) {
   const res = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...options });
@@ -79,13 +216,146 @@ async function api(path, options) {
   return data;
 }
 
+function updateFilterCategories(list) {
+  const catSelect = $('filter-category');
+  if (!catSelect) return;
+  const currentVal = catSelect.value || 'All';
+  const categories = Array.from(new Set(list.map((p) => p.category).filter(Boolean))).sort();
+  catSelect.innerHTML = '<option value="All">All Categories</option>';
+  for (const cat of categories) {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.textContent = cat;
+    if (cat === currentVal) opt.selected = true;
+    catSelect.appendChild(opt);
+  }
+}
+
+function updateStockAdjustmentDropdown(list) {
+  const select = $('adjust-product-id');
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = '<option value="">Select a product...</option>';
+  for (const p of list) {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = '#' + p.id + ' - ' + p.name + ' (' + p.sku + ') [Qty: ' + p.quantity + ']';
+    if (String(p.id) === String(current)) opt.selected = true;
+    select.appendChild(opt);
+  }
+}
+
+function renderLowStock(list) {
+  const lowList = list.filter((p) => p.quantity <= p.lowStockThreshold);
+  const rows = $('low-stock-rows');
+  const empty = $('low-stock-empty');
+  const wrap = $('low-stock-table-wrap');
+  if (!rows || !empty) return;
+  rows.innerHTML = '';
+  if (lowList.length === 0) {
+    empty.hidden = false;
+    if (wrap) wrap.hidden = true;
+  } else {
+    empty.hidden = true;
+    if (wrap) wrap.hidden = false;
+    for (const p of lowList) {
+      const tr = document.createElement('tr');
+      tr.className = 'low-stock-row';
+      const cells = [p.id, p.name, p.sku, p.quantity, p.lowStockThreshold];
+      for (const val of cells) {
+        const td = document.createElement('td');
+        td.textContent = val;
+        tr.appendChild(td);
+      }
+      const tdBadge = document.createElement('td');
+      const badge = document.createElement('span');
+      badge.className = 'badge badge-warn';
+      badge.textContent = 'Low Stock';
+      tdBadge.appendChild(badge);
+      tr.appendChild(tdBadge);
+      rows.appendChild(tr);
+    }
+  }
+}
+
+function renderReport(list) {
+  const totalProducts = list.length;
+  let totalUnits = 0;
+  let lowStockCount = 0;
+  let totalValuation = 0;
+
+  for (const p of list) {
+    totalUnits += Number(p.quantity);
+    if (p.quantity <= p.lowStockThreshold) lowStockCount++;
+    totalValuation += Number(p.price) * Number(p.quantity);
+  }
+
+  if ($('report-total-products')) $('report-total-products').textContent = totalProducts;
+  if ($('report-total-units')) $('report-total-units').textContent = totalUnits;
+  if ($('report-low-stock')) $('report-low-stock').textContent = lowStockCount;
+  if ($('report-total-valuation')) $('report-total-valuation').textContent = '$' + totalValuation.toFixed(2);
+
+  const rows = $('report-rows');
+  const empty = $('report-empty');
+  const wrap = $('report-table-wrap');
+  if (!rows || !empty) return;
+  rows.innerHTML = '';
+
+  if (list.length === 0) {
+    empty.hidden = false;
+    if (wrap) wrap.hidden = true;
+  } else {
+    empty.hidden = true;
+    if (wrap) wrap.hidden = false;
+    for (const p of list) {
+      const tr = document.createElement('tr');
+      const stockVal = (Number(p.price) * Number(p.quantity)).toFixed(2);
+      const isLow = p.quantity <= p.lowStockThreshold;
+      const cells = [p.name, p.sku, p.category, '$' + Number(p.price).toFixed(2), p.quantity, '$' + stockVal];
+      for (const val of cells) {
+        const td = document.createElement('td');
+        td.textContent = val;
+        tr.appendChild(td);
+      }
+      const tdStatus = document.createElement('td');
+      const badge = document.createElement('span');
+      badge.className = isLow ? 'badge badge-warn' : 'badge badge-ok';
+      badge.textContent = isLow ? 'Low Stock' : 'Healthy';
+      tdStatus.appendChild(badge);
+      tr.appendChild(tdStatus);
+      rows.appendChild(tr);
+    }
+  }
+}
+
 async function load() {
-  products = await api('/api/products');
+  const searchInput = $('search-input');
+  const catSelect = $('filter-category');
+  const searchTerm = searchInput ? searchInput.value.trim() : '';
+  const selectedCat = catSelect ? catSelect.value : 'All';
+
+  let path = '/api/products';
+  const query = [];
+  if (searchTerm) query.push('search=' + encodeURIComponent(searchTerm));
+  if (selectedCat && selectedCat !== 'All') query.push('category=' + encodeURIComponent(selectedCat));
+  if (query.length > 0) path += '?' + query.join('&');
+
+  products = await api(path);
   const rows = $('rows');
   rows.innerHTML = '';
-  $('empty').hidden = products.length > 0;
+
+  const isFiltering = query.length > 0;
+  if (isFiltering && products.length === 0) {
+    $('empty').hidden = true;
+    if ($('filter-empty')) $('filter-empty').hidden = false;
+  } else {
+    if ($('filter-empty')) $('filter-empty').hidden = true;
+    $('empty').hidden = products.length > 0;
+  }
+
   for (const p of products) {
     const tr = document.createElement('tr');
+    if (p.quantity <= p.lowStockThreshold) tr.className = 'low-stock-row';
     const cells = [p.id, p.name, p.sku, p.category, Number(p.price).toFixed(2), p.quantity, p.lowStockThreshold];
     for (const c of cells) { const td = document.createElement('td'); td.textContent = c; tr.appendChild(td); }
     const td = document.createElement('td');
@@ -100,6 +370,13 @@ async function load() {
     td.appendChild(deleteBtn);
     rows.appendChild(tr);
   }
+
+  if (!isFiltering) {
+    updateFilterCategories(products);
+  }
+  updateStockAdjustmentDropdown(products);
+  renderLowStock(products);
+  renderReport(products);
 }
 
 async function removeProduct(id) {
@@ -114,6 +391,7 @@ async function removeProduct(id) {
 
 function startEdit(id) {
   const p = products.find((x) => x.id === id);
+  if (!p) return;
   editingId = id;
   $('name').value = p.name; $('sku').value = p.sku; $('category').value = p.category;
   $('price').value = p.price; $('quantity').value = p.quantity; $('threshold').value = p.lowStockThreshold;
@@ -148,6 +426,59 @@ form.addEventListener('submit', async (e) => {
     reset(); await load();
   } catch (err) { show(err.message, 'error'); }
 });
+
+// US-5 Search and Filter Form Handlers
+if ($('filter-form')) {
+  $('filter-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await load();
+  });
+}
+if ($('search-btn')) {
+  $('search-btn').addEventListener('click', async () => {
+    await load();
+  });
+}
+if ($('clear-filters-btn')) {
+  $('clear-filters-btn').addEventListener('click', async () => {
+    if ($('search-input')) $('search-input').value = '';
+    if ($('filter-category')) $('filter-category').value = 'All';
+    await load();
+  });
+}
+
+// US-6 Stock Adjustment Form Handler
+if ($('stock-form')) {
+  $('stock-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const productId = $('adjust-product-id').value;
+    const action = $('adjust-action').value;
+    const amountVal = $('adjust-amount').value;
+    if (!productId) {
+      showStock('Please select a product to adjust stock', 'error');
+      return;
+    }
+    const amount = parseInt(amountVal, 10);
+    try {
+      await api('/api/products/' + productId + '/adjust-stock', {
+        method: 'POST',
+        body: JSON.stringify({ action, amount }),
+      });
+      showStock('Stock successfully updated', 'ok');
+      $('adjust-amount').value = '';
+      await load();
+    } catch (err) {
+      showStock(err.message, 'error');
+    }
+  });
+}
+
+// US-8 Refresh Report Handler
+if ($('refresh-report-btn')) {
+  $('refresh-report-btn').addEventListener('click', async () => {
+    await load();
+  });
+}
 
 load().catch((e) => show(e.message, 'error'));
 </script>

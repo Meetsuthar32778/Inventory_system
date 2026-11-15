@@ -25,11 +25,50 @@ let db;
 // Default fake backend; tests can override fetch for specific calls
 const fakeFetch = jest.fn(async (url, options = {}) => {
   const method = options.method || 'GET';
-  if (url === '/api/products' && method === 'GET') return reply(200, db);
+  if (url === '/api/products/low-stock' && method === 'GET') {
+    return reply(200, db.filter((p) => p.quantity <= p.lowStockThreshold));
+  }
+  if (url === '/api/products/report' && method === 'GET') {
+    const totalUnits = db.reduce((s, p) => s + p.quantity, 0);
+    const lowStockCount = db.filter((p) => p.quantity <= p.lowStockThreshold).length;
+    const totalValuation = db.reduce((s, p) => s + p.price * p.quantity, 0);
+    return reply(200, {
+      totalProducts: db.length,
+      totalUnits,
+      lowStockCount,
+      totalValuation,
+      items: db.map((p) => ({ ...p, stockValue: p.price * p.quantity, isLowStock: p.quantity <= p.lowStockThreshold })),
+    });
+  }
+  if (url.startsWith('/api/products') && method === 'GET') {
+    const urlObj = new URL(url, 'http://localhost');
+    let list = db.map((p) => ({ ...p }));
+    const search = urlObj.searchParams.get('search');
+    const category = urlObj.searchParams.get('category');
+    if (search) {
+      const term = search.toLowerCase();
+      list = list.filter((p) => p.name.toLowerCase().includes(term) || p.sku.toLowerCase().includes(term));
+    }
+    if (category && category !== 'All') {
+      list = list.filter((p) => p.category.toLowerCase() === category.toLowerCase());
+    }
+    return reply(200, list);
+  }
   if (url === '/api/products' && method === 'POST') {
     const p = { id: db.length + 1, category: 'General', ...JSON.parse(options.body) };
     db.push(p);
     return reply(201, p);
+  }
+  if (url.includes('/adjust-stock') && method === 'POST') {
+    const id = Number(url.split('/')[3]);
+    const { action, amount } = JSON.parse(options.body);
+    const p = db.find((x) => x.id === id);
+    if (!p) return reply(404, { error: 'Product not found' });
+    if (action === 'decrease' && p.quantity < amount) {
+      return reply(400, { error: 'Validation failed', details: ['Stock cannot be negative'] });
+    }
+    p.quantity = action === 'increase' ? p.quantity + amount : p.quantity - amount;
+    return reply(200, p);
   }
   const id = Number(url.split('/').pop());
   if (method === 'PUT') {
@@ -309,5 +348,179 @@ describe('Web UI - US-4 delete product', () => {
     await flush();
     expect($('msg').textContent).toBe('Product not found');
     expect($('msg').className).toBe('error');
+  });
+});
+
+describe('Web UI - US-5 search and filter products', () => {
+  test('searches products by name', async () => {
+    await boot([stapler, pen]);
+    $('search-input').value = 'pen';
+    $('search-btn').click();
+    await flush();
+    expect(rows().map((r) => r[1])).toEqual(['Pen']);
+  });
+
+  test('searches products by SKU', async () => {
+    await boot([stapler, pen]);
+    $('search-input').value = 'st-100';
+    $('search-btn').click();
+    await flush();
+    expect(rows().map((r) => r[2])).toEqual(['ST-100']);
+  });
+
+  test('filters products by category dropdown', async () => {
+    await boot([stapler, pen]);
+    $('filter-category').value = 'Office';
+    $('filter-form').dispatchEvent(new Event('submit', { cancelable: true }));
+    await flush();
+    expect(rows().map((r) => r[3])).toEqual(['Office']);
+  });
+
+  test('displays filter empty message when no products match', async () => {
+    await boot([stapler, pen]);
+    $('search-input').value = 'Laptop';
+    $('search-btn').click();
+    await flush();
+    expect($('filter-empty').hidden).toBe(false);
+    expect(rows()).toHaveLength(0);
+  });
+
+  test('reset button clears search input, category, and restores all rows', async () => {
+    await boot([stapler, pen]);
+    $('search-input').value = 'pen';
+    $('search-btn').click();
+    await flush();
+    expect(rows()).toHaveLength(1);
+
+    $('clear-filters-btn').click();
+    await flush();
+    expect($('search-input').value).toBe('');
+    expect($('filter-category').value).toBe('All');
+    expect(rows()).toHaveLength(2);
+  });
+});
+
+describe('Web UI - US-6 increase or reduce stock', () => {
+  test('populates stock adjustment product dropdown', async () => {
+    await boot([stapler, pen]);
+    const options = [...$('adjust-product-id').options];
+    expect(options.map((o) => o.value)).toEqual(['', '1', '2']);
+  });
+
+  test('submitting stock increase updates product quantity and shows success message', async () => {
+    await boot([stapler]);
+    $('adjust-product-id').value = '1';
+    $('adjust-action').value = 'increase';
+    $('adjust-amount').value = '5';
+    $('stock-form').dispatchEvent(new Event('submit', { cancelable: true }));
+    await flush();
+    expect($('stock-msg').textContent).toBe('Stock successfully updated');
+    expect($('stock-msg').className).toBe('ok');
+    expect(rows()[0][5]).toBe('13');
+  });
+
+  test('submitting stock decrease updates quantity', async () => {
+    await boot([stapler]);
+    $('adjust-product-id').value = '1';
+    $('adjust-action').value = 'decrease';
+    $('adjust-amount').value = '3';
+    $('stock-form').dispatchEvent(new Event('submit', { cancelable: true }));
+    await flush();
+    expect($('stock-msg').textContent).toBe('Stock successfully updated');
+    expect(rows()[0][5]).toBe('5');
+  });
+
+  test('shows error when decrease exceeds available stock', async () => {
+    await boot([pen]); // quantity = 0
+    $('adjust-product-id').value = '2';
+    $('adjust-action').value = 'decrease';
+    $('adjust-amount').value = '5';
+    $('stock-form').dispatchEvent(new Event('submit', { cancelable: true }));
+    await flush();
+    expect($('stock-msg').textContent).toBe('Validation failed: Stock cannot be negative');
+    expect($('stock-msg').className).toBe('error');
+  });
+
+  test('requires a product to be selected before adjusting', async () => {
+    await boot([stapler]);
+    $('adjust-product-id').value = '';
+    $('stock-form').dispatchEvent(new Event('submit', { cancelable: true }));
+    await flush();
+    expect($('stock-msg').textContent).toBe('Please select a product to adjust stock');
+    expect($('stock-msg').className).toBe('error');
+  });
+});
+
+describe('Web UI - US-7 identify low-stock products', () => {
+  test('lists products at or below their lowStockThreshold in low-stock section', async () => {
+    await boot([stapler, pen]); // stapler: qty 8, th 5 (healthy). pen: qty 0, th 3 (low stock)
+    expect($('low-stock-empty').hidden).toBe(true);
+    const lowRows = [...$('low-stock-rows').querySelectorAll('tr')];
+    expect(lowRows).toHaveLength(1);
+    expect(lowRows[0].textContent).toContain('Pen');
+    expect(lowRows[0].textContent).toContain('Low Stock');
+  });
+
+  test('shows empty state when no products are low in stock', async () => {
+    await boot([stapler]); // stapler qty 8 > th 5
+    expect($('low-stock-empty').hidden).toBe(false);
+    expect($('low-stock-empty').textContent).toMatch(/All inventory levels are healthy/);
+  });
+
+  test('auto-refreshes low-stock section after a stock adjustment', async () => {
+    await boot([stapler]); // stapler starts healthy (8 > 5)
+    expect($('low-stock-empty').hidden).toBe(false);
+
+    // Reduce stock by 4 -> quantity becomes 4 <= 5 (low stock!)
+    $('adjust-product-id').value = '1';
+    $('adjust-action').value = 'decrease';
+    $('adjust-amount').value = '4';
+    $('stock-form').dispatchEvent(new Event('submit', { cancelable: true }));
+    await flush();
+
+    expect($('low-stock-empty').hidden).toBe(true);
+    const lowRows = [...$('low-stock-rows').querySelectorAll('tr')];
+    expect(lowRows).toHaveLength(1);
+    expect(lowRows[0].textContent).toContain('Stapler');
+  });
+});
+
+describe('Web UI - US-8 view inventory report', () => {
+  test('displays summary metrics and product details', async () => {
+    await boot([stapler, pen]); // stapler: 120 * 8 = 960. pen: 9.5 * 0 = 0. total = 960.00. lowStock = 1 (pen)
+    expect($('report-total-products').textContent).toBe('2');
+    expect($('report-total-units').textContent).toBe('8');
+    expect($('report-low-stock').textContent).toBe('1');
+    expect($('report-total-valuation').textContent).toBe('$960.00');
+
+    const reportRows = [...$('report-rows').querySelectorAll('tr')];
+    expect(reportRows).toHaveLength(2);
+    expect(reportRows[0].textContent).toContain('Stapler');
+    expect(reportRows[0].textContent).toContain('$960.00');
+    expect(reportRows[0].textContent).toContain('Healthy');
+
+    expect(reportRows[1].textContent).toContain('Pen');
+    expect(reportRows[1].textContent).toContain('$0.00');
+    expect(reportRows[1].textContent).toContain('Low Stock');
+  });
+
+  test('handles empty report when no products exist', async () => {
+    await boot([]);
+    expect($('report-total-products').textContent).toBe('0');
+    expect($('report-total-units').textContent).toBe('0');
+    expect($('report-total-valuation').textContent).toBe('$0.00');
+    expect($('report-empty').hidden).toBe(false);
+  });
+
+  test('refresh report button triggers reload', async () => {
+    await boot([stapler]);
+    $('refresh-report-btn').click();
+    await flush();
+    expect($('report-total-products').textContent).toBe('1');
+  });
+
+  test('export CSV button has correct download href', async () => {
+    await boot([stapler]);
+    expect($('export-csv-btn').getAttribute('href')).toBe('/api/products/report/csv');
   });
 });
