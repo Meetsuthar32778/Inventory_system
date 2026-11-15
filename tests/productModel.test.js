@@ -1,4 +1,4 @@
-const { validateProduct } = require('../src/models/product');
+const { validateProduct, validateStockAdjustment } = require('../src/models/product');
 const { ValidationError } = require('../src/errors');
 
 const valid = { name: 'Notebook', sku: 'nb-001', price: 49.5, quantity: 20, category: 'Stationery', lowStockThreshold: 3 };
@@ -136,6 +136,67 @@ describe('validateProduct (unit)', () => {
 
     test('treats an explicit undefined field as absent', () => {
       expect(validateProduct({ name: undefined, price: 1 }, { partial: true })).toEqual({ price: 1 });
+    });
+  });
+});
+
+describe('validateStockAdjustment (unit)', () => {
+  describe('body shape', () => {
+    test.each([
+      ['undefined', undefined],
+      ['null', null],
+      ['a string', 'increase'],
+      ['a number', 5],
+      ['an array', []],
+    ])('rejects %s as the body', (_label, input) => {
+      expect(detailsOf(() => validateStockAdjustment(input))).toEqual(['Request body must be a JSON object']);
+    });
+  });
+
+  describe('action validation', () => {
+    test('accepts "increase" and "decrease" (case-insensitive with trimming)', () => {
+      expect(validateStockAdjustment({ action: ' increase ', amount: 5 })).toEqual({ action: 'increase', amount: 5 });
+      expect(validateStockAdjustment({ action: 'DECREASE', amount: 3 })).toEqual({ action: 'decrease', amount: 3 });
+    });
+
+    test('rejects missing or empty action', () => {
+      expect(detailsOf(() => validateStockAdjustment({ amount: 5 }))).toEqual(['action is required']);
+      expect(detailsOf(() => validateStockAdjustment({ action: '', amount: 5 }))).toEqual(['action is required']);
+      expect(detailsOf(() => validateStockAdjustment({ action: '   ', amount: 5 }))).toEqual(['action is required']);
+    });
+
+    test('rejects invalid action values', () => {
+      expect(detailsOf(() => validateStockAdjustment({ action: 'multiply', amount: 5 }))).toEqual([
+        'action must be either "increase" or "decrease"',
+      ]);
+    });
+  });
+
+  describe('amount validation', () => {
+    test('accepts positive integers via "amount" or "quantity"', () => {
+      expect(validateStockAdjustment({ action: 'increase', amount: 10 })).toEqual({ action: 'increase', amount: 10 });
+      expect(validateStockAdjustment({ action: 'increase', quantity: 4 })).toEqual({ action: 'increase', amount: 4 });
+    });
+
+    test.each([
+      ['missing amount', {}, 'amount is required'],
+      ['null amount', { amount: null }, 'amount is required'],
+      ['empty string amount', { amount: '' }, 'amount is required'],
+      ['zero amount', { amount: 0 }, 'amount must be a positive integer'],
+      ['negative amount', { amount: -5 }, 'amount must be a positive integer'],
+      ['decimal amount', { amount: 2.5 }, 'amount must be a positive integer'],
+      ['string amount', { amount: '10' }, 'amount must be a positive integer'],
+    ])('rejects %s', (_label, override, message) => {
+      expect(detailsOf(() => validateStockAdjustment({ action: 'increase', ...override }))).toEqual([message]);
+    });
+  });
+
+  describe('multiple errors', () => {
+    test('collects both action and amount errors at once', () => {
+      expect(detailsOf(() => validateStockAdjustment({}))).toEqual([
+        'action is required',
+        'amount is required',
+      ]);
     });
   });
 });

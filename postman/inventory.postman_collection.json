@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "Inventory API - Sprint 1",
+    "name": "Inventory API - Sprint 1 & Sprint 2",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -496,6 +496,256 @@
         "body": {
           "mode": "raw",
           "raw": "{\"sku\":\"{{sku}}\"}"
+        }
+      }
+    },
+    {
+      "name": "US-5 Search products by query",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test(\"returns filtered results\", () => { pm.expect(j).to.be.an(\"array\"); pm.expect(j.length).to.be.above(0); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products?search=Second",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products"
+          ],
+          "query": [
+            {
+              "key": "search",
+              "value": "Second"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "US-6 Stock adjustment - increase",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test(\"quantity increased\", () => { pm.expect(j.quantity).to.eql(14); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/{{productId}}/adjust-stock",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "{{productId}}",
+            "adjust-stock"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\":\"increase\",\"amount\":10}"
+        }
+      }
+    },
+    {
+      "name": "US-6 Stock adjustment - reduce",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test(\"quantity reduced\", () => { pm.expect(j.quantity).to.eql(12); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/{{productId}}/adjust-stock",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "{{productId}}",
+            "adjust-stock"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\":\"decrease\",\"amount\":2}"
+        }
+      }
+    },
+    {
+      "name": "US-6 Stock adjustment - reject negative",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/{{productId}}/adjust-stock",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "{{productId}}",
+            "adjust-stock"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\":\"decrease\",\"amount\":999}"
+        }
+      }
+    },
+    {
+      "name": "US-7 Identify low-stock products",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test(\"returns low-stock array\", () => { pm.expect(j).to.be.an(\"array\"); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/low-stock",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "low-stock"
+          ]
+        }
+      }
+    },
+    {
+      "name": "US-8 View inventory report",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test(\"contains metrics\", () => { pm.expect(j.totalProducts).to.be.a(\"number\"); pm.expect(j.totalValuation).to.be.a(\"number\"); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/report",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "report"
+          ]
+        }
+      }
+    },
+    {
+      "name": "US-8 Export inventory CSV",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+              "pm.test(\"text/csv content type\", () => { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"text/csv\"); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/report/csv",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "products",
+            "report",
+            "csv"
+          ]
         }
       }
     },
