@@ -1,26 +1,44 @@
-# Test Report - Sprint 1 (Core Item Management)
+# Test Report - Sprint 1 & Sprint 2
 
-**Story:** As a project team member, I want the inventory features to be tested so that important workflows can be verified before the final demonstration.
+**Scope:** Comprehensive verification for Sprint 1 (Core Item Management) and Sprint 2 (Search, Stock Adjustments, Low-Stock Alerts, Inventory Valuation & Testing).
 
-| | |
+| Metadata | Details |
 |---|---|
-| Date executed | 2026-10-29 |
-| Build | `main` @ `e8c87c8` + test suite changes |
-| Environment | Node v25.2.1, Windows 11; CI: Node 20, ubuntu-latest |
-| Tools | Jest 30 (unit, integration, UI via jsdom), Supertest, Postman/Newman |
+| Date executed | 2026-11-15 |
+| Branch | `feature/sprint-2-inventory` |
+| Environment | Node v20.11.1, macOS; Storage: File (`data/products.json`) & In-Memory |
+| Testing Tools | Jest 30 (unit, integration, UI via jsdom), Supertest 7, Postman/Newman |
 
-## 1. How to run
+---
+
+## 1. How to run tests
+
 ```bash
-npm test                 # all Jest tests
-npm run test:coverage    # Jest + coverage report
-STORAGE=memory npm start # then, in a second terminal:
+# Run all Jest test suites
+npm test
+
+# Run all Jest test suites with full coverage report
+npm run test:coverage
+
+# Run API collection against in-memory backend
+STORAGE=memory npm start
+# In a second terminal:
 npx newman run postman/inventory.postman_collection.json
 ```
 
-## 2. Test cases for the core workflows
-Each row is one acceptance criterion from the README. "Evidence" names the suites that check it
-(S = `productService.test.js`, A = `products.api.test.js`, M = `productModel.test.js`,
-R = repository tests, U = `ui.test.js`, P = Postman collection).
+---
+
+## 2. Test cases and Acceptance Criteria
+
+Evidence key:
+- **S** = `tests/productService.test.js` (Business logic)
+- **A** = `tests/products.api.test.js` (Integration / Supertest API)
+- **M** = `tests/productModel.test.js` (Validation & Domain models)
+- **R** = `tests/jsonFileRepository.test.js` & `tests/inMemoryRepository.test.js` (Persistence)
+- **U** = `tests/ui.test.js` (Frontend jsdom)
+- **P** = `postman/inventory.postman_collection.json` (Contract testing)
+
+### Sprint 1 Test Cases (Preserved)
 
 | TC | Story | Acceptance criterion | Evidence | Result |
 |---|---|---|---|---|
@@ -42,32 +60,91 @@ R = repository tests, U = `ui.test.js`, P = Postman collection).
 | TC-16 | All | Data persists across restarts (JSON file storage) | R | Pass |
 | TC-17 | All | Unexpected errors -> 500 without internal details | A | Pass |
 
-## 3. Execution results (2026-10-29)
+### Sprint 2 Test Cases (New)
 
-| Suite | Tests | Passed | Failed |
-|---|---|---|---|
-| Jest - all 8 suites | 202 | 202 | 0 |
-| Newman - Postman collection | 18 requests / 24 assertions | 24 | 0 |
+| TC | Story | Acceptance criterion | Evidence | Result |
+|---|---|---|---|---|
+| TC-18 | US-5 | Search by product name (case-insensitive, partial matching) | S, A, U | Pass |
+| TC-19 | US-5 | Search by product SKU (case-insensitive, partial matching) | S, A, U | Pass |
+| TC-20 | US-5 | Filter products by category (case-insensitive) | S, A, U | Pass |
+| TC-21 | US-5 | Combined search term and category filtering | S, A, U | Pass |
+| TC-22 | US-5 | Display helpful empty/no-results state when search yields no matches | S, A, U | Pass |
+| TC-23 | US-5 | Clear/reset filters restores full product list and default view | U | Pass |
+| TC-24 | US-5 | Filtering returns cloned objects without mutating stored repository data | S, R | Pass |
+| TC-25 | US-6 | Increase product stock quantity with positive integer; refresh `updatedAt` | S, A, U | Pass |
+| TC-26 | US-6 | Reduce product stock quantity with positive integer | S, A, U | Pass |
+| TC-27 | US-6 | Prevent negative inventory: reject stock decrease exceeding current stock (400) | S, A, U | Pass |
+| TC-28 | US-6 | Reject invalid, zero, negative, and decimal adjustment quantities (400) | S, A, M, U | Pass |
+| TC-29 | US-6 | Dedicated API endpoints: `POST /api/products/:id/adjust-stock` & `PATCH /api/products/:id/stock` | A, U | Pass |
+| TC-30 | US-7 | Identify low-stock products (`quantity <= lowStockThreshold`) | S, A, U | Pass |
+| TC-31 | US-7 | Low-stock boundary conditions (quantity === threshold vs quantity > threshold) | S, A, U | Pass |
+| TC-32 | US-7 | Dedicated low-stock UI card with warning badges and healthy empty-state message | U | Pass |
+| TC-33 | US-7 | Automatic refresh of low-stock alerts after stock increase/reduction | U | Pass |
+| TC-34 | US-8 | View inventory report aggregates: total products, total units, low stock count, valuation | S, A, U | Pass |
+| TC-35 | US-8 | Product-wise valuation calculation (`price * quantity`) with formatted values | S, A, U | Pass |
+| TC-36 | US-8 | Graceful handling and rendering of empty inventory reports | S, A, U | Pass |
+| TC-37 | US-8 | Export inventory report as CSV (`GET /api/products/report/csv`) without dependencies | S, A, U | Pass |
+| TC-38 | US-8 | Dedicated report refresh action in UI and API | S, A, U | Pass |
+| TC-39 | Fix | DEF-1: Derive nextId from max existing ID when gaps exist and nextId is missing | R | Pass |
+| TC-40 | Fix | DEF-2: Reject JSON array body on product update with 400 Validation failed | M, A | Pass |
 
-Code coverage of `src/`: **100%** statements, branches, functions and lines.
+---
 
-The suite was also checked by deliberately breaking the code (empty-state logic, delete-while-editing,
-SKU conflict check): 4 tests failed as expected, then the code was restored.
+## 3. Test execution results
 
-## 4. Defect log
+| Suite | File | Tests | Passed | Failed |
+|---|---|---|---|---|
+| Unit: Model | `tests/productModel.test.js` | 42 | 42 | 0 |
+| Unit: Errors | `tests/errors.test.js` | 4 | 4 | 0 |
+| Unit: In-Memory Repo | `tests/inMemoryRepository.test.js` | 15 | 15 | 0 |
+| Unit: JSON File Repo | `tests/jsonFileRepository.test.js` | 13 | 13 | 0 |
+| Unit: Product Service | `tests/productService.test.js` | 61 | 61 | 0 |
+| Unit: Server Bootstrap | `tests/server.test.js` | 4 | 4 | 0 |
+| Integration: API | `tests/products.api.test.js` | 100 | 100 | 0 |
+| Integration / UI: jsdom | `tests/ui.test.js` | 38 | 38 | 0 |
+| **Total Jest** | **8 test suites** | **277** | **277** | **0** |
+| Postman / Newman | `postman/inventory.postman_collection.json` | 18 requests / 24 assertions | 24 | 0 |
 
-| ID | Severity | Status | Description | Steps to reproduce | Expected | Actual |
+### Code Coverage Report (`src/`)
+
+```text
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |     100 |      100 |     100 |     100 |                   
+ src               |     100 |      100 |     100 |     100 |                   
+  app.js           |     100 |      100 |     100 |     100 |                   
+  errors.js        |     100 |      100 |     100 |     100 |                   
+  server.js        |     100 |      100 |     100 |     100 |                   
+ src/models        |     100 |      100 |     100 |     100 |                   
+  product.js       |     100 |      100 |     100 |     100 |                   
+ src/repositories  |     100 |      100 |     100 |     100 |                   
+  ...Repository.js |     100 |      100 |     100 |     100 |                   
+  ...Repository.js |     100 |      100 |     100 |     100 |                   
+ src/routes        |     100 |      100 |     100 |     100 |                   
+  productRoutes.js |     100 |      100 |     100 |     100 |                   
+ src/services      |     100 |      100 |     100 |     100 |                   
+  ...uctService.js |     100 |      100 |     100 |     100 |                   
+-------------------|---------|----------|---------|---------|-------------------
+```
+
+---
+
+## 4. Defect log & Resolution Status
+
+| ID | Severity | Status | Description | Root Cause | Resolution | Regression Evidence |
 |---|---|---|---|---|---|---|
-| DEF-1 | Medium | Open | Duplicate ids when `data/products.json` has no `nextId` and ids have gaps (`jsonFileProductRepository.js:18` uses `products.length + 1`) | Data file `{"products":[{"id":1},{"id":3}]}`, start app, add a product | New id 4 | New id 3 (ids 1, 3, 3) |
-| DEF-2 | Low | Open | `PUT /api/products/:id` with a JSON array body is accepted as an empty update | `PUT /api/products/1` with body `[]` | 400 Validation failed | 200, only `updatedAt` changes |
+| **DEF-1** | Medium | **Fixed** | Duplicate IDs generated when `data/products.json` lacks `nextId` and existing products contain ID gaps. | `_load()` used `products.length + 1` instead of finding maximum existing ID. | Updated `_load()` in `jsonFileProductRepository.js` to compute `maxId = Math.max(...ids)` and set `nextId = raw.nextId || maxId + 1`. | `tests/jsonFileRepository.test.js`: `DEF-1: avoids duplicate ids when nextId is missing and existing ids have gaps` |
+| **DEF-2** | Low | **Fixed** | `PUT /api/products/:id` with body `[]` accepted as empty update (200). | `typeof [] === 'object'` evaluated to true; partial validation treated array as having no keys. | Added explicit `Array.isArray(data)` check in `validateProduct` (`product.js`) to reject arrays as non-object bodies. | `tests/productModel.test.js`: `rejects an array as the body`; `tests/products.api.test.js`: `DEF-2: a JSON array body returns 400` |
 
-Track both in Jira (Agile space) as Bugs and link them to this story; update the Status column when fixed.
+---
 
-## 5. Acceptance criteria sign-off
+## 5. Acceptance Criteria Sign-Off
 
-| Story acceptance criterion | Status | Where |
+| Sprint 2 User Story | Status | Verification Reference |
 |---|---|---|
-| Test cases are prepared for the agreed core workflows | Done | Section 2; `tests/`, `postman/` |
-| Tests are executed and results recorded | Done | Section 3; CI runs on every push |
-| Defects are documented and tracked | Documented; Jira tickets to be raised | Section 4 |
-| The team records whether the agreed acceptance criteria pass | Done - all 17 test cases pass | Section 2 |
+| **US-5: Search and Filter Products** | Complete & Verified | TC-18 through TC-24; Unit, API, and UI test suites |
+| **US-6: Increase or Reduce Stock** | Complete & Verified | TC-25 through TC-29; Unit, API, and UI test suites |
+| **US-7: Identify Low-Stock Products** | Complete & Verified | TC-30 through TC-33; Unit, API, and UI test suites |
+| **US-8: View Inventory Report** | Complete & Verified | TC-34 through TC-38; Unit, API, and UI test suites |
+| **US-9: Test and Validate Features** | Complete & Verified | 277 automated tests; 100% code coverage across all source files |
