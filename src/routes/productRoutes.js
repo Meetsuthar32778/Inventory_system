@@ -21,9 +21,45 @@ function productRoutes(productService) {
 
   router.get('/', (req, res, next) => {
     try {
-      res.json(productService.listProducts());
+      const { search, category, lowStock } = req.query;
+      res.json(productService.listProducts({ search, category, lowStock }));
     } catch (e) { next(e); }
   });
+
+  // US-7: identify low-stock products
+  router.get('/low-stock', (req, res, next) => {
+    try {
+      res.json(productService.getLowStockProducts());
+    } catch (e) { next(e); }
+  });
+
+  // US-8: view inventory report (JSON)
+  router.get('/report', (req, res, next) => {
+    try {
+      res.json(productService.getInventoryReport());
+    } catch (e) { next(e); }
+  });
+
+  // US-8: export inventory report as CSV
+  router.get('/report/csv', (req, res, next) => {
+    try {
+      const csv = productService.generateInventoryCsv();
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="inventory-report.csv"');
+      res.send(csv);
+    } catch (e) { next(e); }
+  });
+
+  // US-6: increase or reduce stock
+  const handleStockAdjustment = (req, res, next) => {
+    try {
+      const id = parseId(req, res);
+      if (id === null) return;
+      res.json(productService.adjustStock(id, req.body));
+    } catch (e) { next(e); }
+  };
+  router.post('/:id/adjust-stock', handleStockAdjustment);
+  router.patch('/:id/stock', handleStockAdjustment);
 
   router.get('/:id', (req, res, next) => {
     try {

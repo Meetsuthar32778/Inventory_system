@@ -54,4 +54,33 @@ function validateProduct(data, { partial = false } = {}) {
   return out;
 }
 
-module.exports = { validateProduct };
+/**
+ * Validates stock adjustment input.
+ * Expects action: 'increase' | 'decrease'
+ * Expects amount: positive integer (> 0)
+ */
+function validateStockAdjustment(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new ValidationError(['Request body must be a JSON object']);
+  }
+  const errors = [];
+  const action = typeof data.action === 'string' ? data.action.trim().toLowerCase() : '';
+  const validActions = ['increase', 'decrease'];
+  if (!action) {
+    errors.push('action is required');
+  } else if (!validActions.includes(action)) {
+    errors.push('action must be either "increase" or "decrease"');
+  }
+
+  const rawAmount = data.amount !== undefined ? data.amount : data.quantity;
+  if (rawAmount === undefined || rawAmount === null || rawAmount === '') {
+    errors.push('amount is required');
+  } else if (!Number.isInteger(rawAmount) || rawAmount <= 0) {
+    errors.push('amount must be a positive integer');
+  }
+
+  if (errors.length) throw new ValidationError(errors);
+  return { action, amount: rawAmount };
+}
+
+module.exports = { validateProduct, validateStockAdjustment };
